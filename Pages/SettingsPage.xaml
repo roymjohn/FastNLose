@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+x:Class="FastNLose.Pages.SettingsPage"
+Title="Settings">
+
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="16">
+            <Label Text="Target total hours" />
+            <Entry x:Name="targetEntry" Keyboard="Numeric" Placeholder="e.g. 8" />
+
+
+            <Label Text="Expected Start (HH:mm)" />
+            <Entry x:Name="expectedStartEntry" Placeholder="08:30" />
+
+
+            <Label Text="Expected Stop (HH:mm)" />
+            <Entry x:Name="expectedStopEntry" Placeholder="17:30" />
+
+
+            <Button Text="Save" Clicked="OnSaveClicked" />
+        </StackLayout>
+    </ScrollView>
+
+
+</ContentPage>

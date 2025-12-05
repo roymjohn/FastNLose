@@ -1,0 +1,247 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:FastNLose"
+             x:Class="FastNLose.Pages.MainPage"
+             Title="Fast N Lose">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <local:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid>
+
+        <ScrollView>
+            <StackLayout Padding="20" Spacing="12">
+
+                <!-- Title row with triple-tap gesture -->
+                <Grid ColumnDefinitions="*, Auto, *">
+                    <Label Text="N-Carb"
+                           Grid.Column="1"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           FontSize="20" >
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnTitleTapped" NumberOfTapsRequired="1"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                </Grid>
+
+                <!-- Controls row: Start | Pick | Stop -->
+                <Grid ColumnDefinitions="*, Auto, *" RowSpacing="8" ColumnSpacing="8">
+                    <Button x:Name="StartButton"
+                            Grid.Column="0"
+                            Text="START now"
+                            IsVisible="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
+                            Clicked="OnStartClicked"
+                            HorizontalOptions="FillAndExpand" />
+
+                    <Button x:Name="PickTimeButton"
+                            Grid.Column="1"
+                            Text="⏱ Pick"
+                            Clicked="OnPickTimeClicked"
+                            HorizontalOptions="Center" />
+
+                    <Button x:Name="StopButton"
+                            Grid.Column="2"
+                            Text="STOP NOW"
+                            IsVisible="{Binding IsRunning}"
+                            Clicked="OnStopClicked"
+                            HorizontalOptions="FillAndExpand" />
+                </Grid>
+
+                <!-- Elapsed -->
+                <Label Text="{Binding ElapsedTime}"
+                       FontSize="42"
+                       HorizontalOptions="Center" />
+
+                <!-- H2O row: Label + 9 small circular buttons -->
+                <Grid ColumnDefinitions="Auto, *" VerticalOptions="Center" Padding="0" Margin="0,8,0,0">
+                    <Label Text="H2O -"
+                           VerticalOptions="Center"
+                           FontAttributes="Bold"
+                           Grid.Column="0"
+                           Margin="0,0,8,0"/>
+                    <ScrollView Grid.Column="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <StackLayout Orientation="Horizontal" Spacing="8" VerticalOptions="Center">
+                            <!-- 9 H2O buttons -->
+                            <Button BackgroundColor="{Binding H2OColor1}"
+                                    IsEnabled="{Binding H2OEnabled1}"
+                                    Clicked="OnH2O1" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor2}"
+                                    IsEnabled="{Binding H2OEnabled2}"
+                                    Clicked="OnH2O2" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor3}"
+                                    IsEnabled="{Binding H2OEnabled3}"
+                                    Clicked="OnH2O3" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor4}"
+                                    IsEnabled="{Binding H2OEnabled4}"
+                                    Clicked="OnH2O4" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor5}"
+                                    IsEnabled="{Binding H2OEnabled5}"
+                                    Clicked="OnH2O5" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor6}"
+                                    IsEnabled="{Binding H2OEnabled6}"
+                                    Clicked="OnH2O6" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor7}"
+                                    IsEnabled="{Binding H2OEnabled7}"
+                                    Clicked="OnH2O7" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor8}"
+                                    IsEnabled="{Binding H2OEnabled8}"
+                                    Clicked="OnH2O8" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding H2OColor9}"
+                                    IsEnabled="{Binding H2OEnabled9}"
+                                    Clicked="OnH2O9" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                        </StackLayout>
+                    </ScrollView>
+                </Grid>
+
+                <!-- WKT row: Label + 9 small circular buttons -->
+                <Grid ColumnDefinitions="Auto, *" VerticalOptions="Center" Padding="0" Margin="0,4,0,0">
+                    <Label Text="WKT -"
+                           VerticalOptions="Center"
+                           FontAttributes="Bold"
+                           Grid.Column="0"
+                           Margin="0,0,8,0"/>
+                    <ScrollView Grid.Column="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <StackLayout Orientation="Horizontal" Spacing="8" VerticalOptions="Center">
+                            <!-- 9 WKT buttons -->
+                            <Button BackgroundColor="{Binding WKTColor1}"
+                                    IsEnabled="{Binding WKTEnabled1}"
+                                    Clicked="OnWKT1" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor2}"
+                                    IsEnabled="{Binding WKTEnabled2}"
+                                    Clicked="OnWKT2" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor3}"
+                                    IsEnabled="{Binding WKTEnabled3}"
+                                    Clicked="OnWKT3" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor4}"
+                                    IsEnabled="{Binding WKTEnabled4}"
+                                    Clicked="OnWKT4" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor5}"
+                                    IsEnabled="{Binding WKTEnabled5}"
+                                    Clicked="OnWKT5" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor6}"
+                                    IsEnabled="{Binding WKTEnabled6}"
+                                    Clicked="OnWKT6" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor7}"
+                                    IsEnabled="{Binding WKTEnabled7}"
+                                    Clicked="OnWKT7" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor8}"
+                                    IsEnabled="{Binding WKTEnabled8}"
+                                    Clicked="OnWKT8" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                            <Button BackgroundColor="{Binding WKTColor9}"
+                                    IsEnabled="{Binding WKTEnabled9}"
+                                    Clicked="OnWKT9" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
+                        </StackLayout>
+                    </ScrollView>
+                </Grid>
+
+                <!-- Overall total & days -->
+                <Label x:Name="TotalElapsedLabel"
+                       FontSize="16" HorizontalOptions="Center" Margin="0,8,0,0">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="Overall Total: " />
+                            <Span Text="{Binding TotalElapsedTime}" />
+                            <Span Text=" (" />
+                            <Span Text="{Binding DaysCount}" />
+                            <Span Text=" days)" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+
+                <!-- Score -->
+                <Label x:Name="ScoreLabel"
+                       FontSize="16"
+                       Text="{Binding Score, StringFormat='Score: {0}'}"
+                       HorizontalOptions="Center" />
+
+                <!-- Header showing LAST X sessions -->
+                <Label FontAttributes="Bold" FontSize="18" Margin="0,10,0,5">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="Last " />
+                            <Span Text="{Binding NumberOfSessions}" />
+                            <Span Text=" Sessions:" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+
+                <!-- Recent sessions -->
+                <CollectionView x:Name="LastTwoList"
+                                HeightRequest="150">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <StackLayout Orientation="Horizontal" Spacing="10" Padding="5">
+                                <Label Text="{Binding DisplayText}" FontSize="14" />
+                            </StackLayout>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+               
+
+                <CollectionView ItemsSource="{Binding Progress}"
+                HeightRequest="250">
+
+                    <CollectionView.Header>
+                        <Grid ColumnDefinitions="1.2*,0.7*,0.7*,1*"
+              Padding="5"
+              BackgroundColor="#eeeeee">
+                            <Label Text="Date"
+                   Grid.Column="0"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Start"/>
+
+                            <Label Text="H2"
+                   Grid.Column="1"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"/>
+
+                            <Label Text="Wk"
+                   Grid.Column="2"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"/>
+
+                            <Label Text="Fs"
+                   Grid.Column="3"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"/>
+                        </Grid>
+                    </CollectionView.Header>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="1.2*,0.7*,0.7*,1*"
+                  Padding="5"
+                  Margin="0,2">
+
+                                <Label Text="{Binding Date}"
+                       Grid.Column="0"
+                       HorizontalOptions="Start"/>
+
+                                <Label Text="{Binding H2}"
+                       Grid.Column="1"
+                       HorizontalOptions="Center"/>
+
+                                <Label Text="{Binding Wk}"
+                       Grid.Column="2"
+                       HorizontalOptions="Center"/>
+
+                                <Label Text="{Binding Fs}"
+                       Grid.Column="3"
+                       HorizontalOptions="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+
+                </CollectionView>
+
+
+            </StackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
