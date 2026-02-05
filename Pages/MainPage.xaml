@@ -1,247 +1,301 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+﻿<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:FastNLose"
-             x:Class="FastNLose.Pages.MainPage"
-             Title="Fast N Lose">
+             x:Class="FastNLose.MainPage"
+             x:Name="page"
+             BackgroundColor="{Binding IsAllCompleted, Converter={StaticResource BoolToGreen}}">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <local:InverseBoolConverter x:Key="InverseBoolConverter" />
-        </ResourceDictionary>
-    </ContentPage.Resources>
+    <!-- Root layout -->
+    <Grid RowDefinitions="Auto,*">
 
-    <Grid>
+        <!-- ================= HEADER ================= -->
+        <VerticalStackLayout Grid.Row="0" Spacing="4" Padding="6">
 
-        <ScrollView>
-            <StackLayout Padding="20" Spacing="12">
+            <!-- Title -->
+            <Label Text="CHATHA PATCHA"
+                   FontSize="20"
+                   HorizontalOptions="Center"
+                   FontAttributes="Bold">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnTitleTapped" NumberOfTapsRequired="1" />
+                </Label.GestureRecognizers>
+            </Label>
 
-                <!-- Title row with triple-tap gesture -->
-                <Grid ColumnDefinitions="*, Auto, *">
-                    <Label Text="N-Carb"
-                           Grid.Column="1"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           FontSize="20" >
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnTitleTapped" NumberOfTapsRequired="1"/>
-                        </Label.GestureRecognizers>
-                    </Label>
-                </Grid>
+            <!-- Date Navigator -->
+            <Grid ColumnDefinitions="36,*,36"
+                  Padding="4"
+                  VerticalOptions="Center">
 
-                <!-- Controls row: Start | Pick | Stop -->
-                <Grid ColumnDefinitions="*, Auto, *" RowSpacing="8" ColumnSpacing="8">
-                    <Button x:Name="StartButton"
-                            Grid.Column="0"
-                            Text="START now"
-                            IsVisible="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"
-                            Clicked="OnStartClicked"
-                            HorizontalOptions="FillAndExpand" />
+                <!-- PREV -->
+                <Button
+                    Grid.Column="0"
+                    Text="◀"
+                    WidthRequest="32"
+                    HeightRequest="32"
+                    CornerRadius="8"
+                    Padding="0"
+                    FontSize="14"
+                    FontAttributes="Bold"
+                    TextColor="White"
+                    BackgroundColor="#5BC0FF"
+                    IsEnabled="{Binding CanPrev}"
+                    Command="{Binding PrevDatesCommand}" />
 
-                    <Button x:Name="PickTimeButton"
-                            Grid.Column="1"
-                            Text="⏱ Pick"
-                            Clicked="OnPickTimeClicked"
-                            HorizontalOptions="Center" />
-
-                    <Button x:Name="StopButton"
-                            Grid.Column="2"
-                            Text="STOP NOW"
-                            IsVisible="{Binding IsRunning}"
-                            Clicked="OnStopClicked"
-                            HorizontalOptions="FillAndExpand" />
-                </Grid>
-
-                <!-- Elapsed -->
-                <Label Text="{Binding ElapsedTime}"
-                       FontSize="42"
-                       HorizontalOptions="Center" />
-
-                <!-- H2O row: Label + 9 small circular buttons -->
-                <Grid ColumnDefinitions="Auto, *" VerticalOptions="Center" Padding="0" Margin="0,8,0,0">
-                    <Label Text="H2O -"
-                           VerticalOptions="Center"
-                           FontAttributes="Bold"
-                           Grid.Column="0"
-                           Margin="0,0,8,0"/>
-                    <ScrollView Grid.Column="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-                        <StackLayout Orientation="Horizontal" Spacing="8" VerticalOptions="Center">
-                            <!-- 9 H2O buttons -->
-                            <Button BackgroundColor="{Binding H2OColor1}"
-                                    IsEnabled="{Binding H2OEnabled1}"
-                                    Clicked="OnH2O1" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor2}"
-                                    IsEnabled="{Binding H2OEnabled2}"
-                                    Clicked="OnH2O2" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor3}"
-                                    IsEnabled="{Binding H2OEnabled3}"
-                                    Clicked="OnH2O3" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor4}"
-                                    IsEnabled="{Binding H2OEnabled4}"
-                                    Clicked="OnH2O4" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor5}"
-                                    IsEnabled="{Binding H2OEnabled5}"
-                                    Clicked="OnH2O5" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor6}"
-                                    IsEnabled="{Binding H2OEnabled6}"
-                                    Clicked="OnH2O6" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor7}"
-                                    IsEnabled="{Binding H2OEnabled7}"
-                                    Clicked="OnH2O7" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor8}"
-                                    IsEnabled="{Binding H2OEnabled8}"
-                                    Clicked="OnH2O8" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding H2OColor9}"
-                                    IsEnabled="{Binding H2OEnabled9}"
-                                    Clicked="OnH2O9" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                        </StackLayout>
-                    </ScrollView>
-                </Grid>
-
-                <!-- WKT row: Label + 9 small circular buttons -->
-                <Grid ColumnDefinitions="Auto, *" VerticalOptions="Center" Padding="0" Margin="0,4,0,0">
-                    <Label Text="WKT -"
-                           VerticalOptions="Center"
-                           FontAttributes="Bold"
-                           Grid.Column="0"
-                           Margin="0,0,8,0"/>
-                    <ScrollView Grid.Column="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-                        <StackLayout Orientation="Horizontal" Spacing="8" VerticalOptions="Center">
-                            <!-- 9 WKT buttons -->
-                            <Button BackgroundColor="{Binding WKTColor1}"
-                                    IsEnabled="{Binding WKTEnabled1}"
-                                    Clicked="OnWKT1" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor2}"
-                                    IsEnabled="{Binding WKTEnabled2}"
-                                    Clicked="OnWKT2" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor3}"
-                                    IsEnabled="{Binding WKTEnabled3}"
-                                    Clicked="OnWKT3" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor4}"
-                                    IsEnabled="{Binding WKTEnabled4}"
-                                    Clicked="OnWKT4" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor5}"
-                                    IsEnabled="{Binding WKTEnabled5}"
-                                    Clicked="OnWKT5" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor6}"
-                                    IsEnabled="{Binding WKTEnabled6}"
-                                    Clicked="OnWKT6" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor7}"
-                                    IsEnabled="{Binding WKTEnabled7}"
-                                    Clicked="OnWKT7" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor8}"
-                                    IsEnabled="{Binding WKTEnabled8}"
-                                    Clicked="OnWKT8" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                            <Button BackgroundColor="{Binding WKTColor9}"
-                                    IsEnabled="{Binding WKTEnabled9}"
-                                    Clicked="OnWKT9" WidthRequest="18" HeightRequest="18" CornerRadius="9" Padding="1"/>
-                        </StackLayout>
-                    </ScrollView>
-                </Grid>
-
-                <!-- Overall total & days -->
-                <Label x:Name="TotalElapsedLabel"
-                       FontSize="16" HorizontalOptions="Center" Margin="0,8,0,0">
-                    <Label.FormattedText>
-                        <FormattedString>
-                            <Span Text="Overall Total: " />
-                            <Span Text="{Binding TotalElapsedTime}" />
-                            <Span Text=" (" />
-                            <Span Text="{Binding DaysCount}" />
-                            <Span Text=" days)" />
-                        </FormattedString>
-                    </Label.FormattedText>
-                </Label>
-
-                <!-- Score -->
-                <Label x:Name="ScoreLabel"
-                       FontSize="16"
-                       Text="{Binding Score, StringFormat='Score: {0}'}"
-                       HorizontalOptions="Center" />
-
-                <!-- Header showing LAST X sessions -->
-                <Label FontAttributes="Bold" FontSize="18" Margin="0,10,0,5">
-                    <Label.FormattedText>
-                        <FormattedString>
-                            <Span Text="Last " />
-                            <Span Text="{Binding NumberOfSessions}" />
-                            <Span Text=" Sessions:" />
-                        </FormattedString>
-                    </Label.FormattedText>
-                </Label>
-
-                <!-- Recent sessions -->
-                <CollectionView x:Name="LastTwoList"
-                                HeightRequest="150">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate>
-                            <StackLayout Orientation="Horizontal" Spacing="10" Padding="5">
-                                <Label Text="{Binding DisplayText}" FontSize="14" />
-                            </StackLayout>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-
-               
-
-                <CollectionView ItemsSource="{Binding Progress}"
-                HeightRequest="250">
-
-                    <CollectionView.Header>
-                        <Grid ColumnDefinitions="1.2*,0.7*,0.7*,1*"
-              Padding="5"
-              BackgroundColor="#eeeeee">
-                            <Label Text="Date"
-                   Grid.Column="0"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Start"/>
-
-                            <Label Text="H2"
-                   Grid.Column="1"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"/>
-
-                            <Label Text="Wk"
-                   Grid.Column="2"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"/>
-
-                            <Label Text="Fs"
-                   Grid.Column="3"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"/>
-                        </Grid>
-                    </CollectionView.Header>
+                <!-- DATE STRIP -->
+                    <CollectionView
+                    Grid.Column="1"
+                    ItemsSource="{Binding VisibleDates}"
+                    ItemsLayout="HorizontalList"
+                    HorizontalScrollBarVisibility="Never"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center"
+                    HeightRequest="39">
 
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="1.2*,0.7*,0.7*,1*"
-                  Padding="5"
-                  Margin="0,2">
+                            <Border HeightRequest="35" Padding="6"
+       Background="{Binding Background}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="18" />
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectDateCommand}"
+            CommandParameter="{Binding}" />
+                                </Border.GestureRecognizers>
 
-                                <Label Text="{Binding Date}"
-                       Grid.Column="0"
-                       HorizontalOptions="Start"/>
+                                <Label Text="{Binding Display}"
+                                       TextColor="{Binding IsSelected, Converter={StaticResource BoolToTextColorConverter}}" />
+                            </Border>
 
-                                <Label Text="{Binding H2}"
-                       Grid.Column="1"
-                       HorizontalOptions="Center"/>
-
-                                <Label Text="{Binding Wk}"
-                       Grid.Column="2"
-                       HorizontalOptions="Center"/>
-
-                                <Label Text="{Binding Fs}"
-                       Grid.Column="3"
-                       HorizontalOptions="Center"/>
-                            </Grid>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
 
                 </CollectionView>
 
+                <!-- NEXT -->
+                <Button
+                    Grid.Column="2"
+                    Text="▶"
+                    WidthRequest="32"
+                    HeightRequest="32"
+                    CornerRadius="8"
+                    Padding="0"
+                    FontSize="14"
+                    FontAttributes="Bold"
+                    TextColor="White"
+                    BackgroundColor="#5BC0FF"
+                    IsEnabled="True"
+                    InputTransparent="False"
+                    ZIndex="10"
+                    Command="{Binding NextDatesCommand}" />
+            </Grid>
+        </VerticalStackLayout>
 
-            </StackLayout>
+        <!-- ================= MAIN CONTENT ================= -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="2" Padding="8"
+                                 BindableLayout.ItemsSource="{Binding Categories}">
+
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate>
+
+                        <Border Background="{Binding Background}"
+                               Padding="6" x:Name="sectionBorder">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="16" />
+                            </Border.StrokeShape>
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding Key}" Value="16HR_FAST">
+                                    <Setter Property="Padding" Value="3" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Border" Binding="{Binding Key}" Value="WEIGHT">
+                                    <Setter Property="Padding" Value="3" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Border" Binding="{Binding Key}" Value="SUGAR_8AM">
+                                    <Setter Property="Padding" Value="3" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Border" Binding="{Binding Key}" Value="STEPS">
+                                    <Setter Property="Padding" Value="3" />
+                                </DataTrigger>
+                            </Border.Triggers>
+
+                                <VerticalStackLayout x:Name="sectionStack" Spacing="2">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout" Binding="{Binding Key}" Value="16HR_FAST">
+                                            <Setter Property="Spacing" Value="1" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="VerticalStackLayout" Binding="{Binding Key}" Value="WEIGHT">
+                                            <Setter Property="Spacing" Value="1" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="VerticalStackLayout" Binding="{Binding Key}" Value="SUGAR_8AM">
+                                            <Setter Property="Spacing" Value="1" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="VerticalStackLayout" Binding="{Binding Key}" Value="STEPS">
+                                            <Setter Property="Spacing" Value="1" />
+                                        </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+
+                                <Grid>
+                                    <!-- Stacked layout: title on first row, controls on second -->
+                                    <VerticalStackLayout IsVisible="{Binding ForceStacked}" Spacing="1.5">
+                                        <Label Text="{Binding Name}"
+                                               FontAttributes="Bold"
+                                               FontSize="14"
+                                               Margin="0"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="Start" />
+
+                                        <HorizontalStackLayout Spacing="9" VerticalOptions="Center">
+                                            <!-- Slots row for stacked layout -->
+                                            <CollectionView ItemsSource="{Binding Slots}"
+                                                            ItemsLayout="HorizontalList"
+                                                            HeightRequest="31"
+                                                            Margin="0"
+                                                            HorizontalOptions="Start"
+                                                            IsVisible="{Binding IsPicker, Converter={StaticResource InverseBoolConverter}}"
+                                                            IsEnabled="{Binding IsEditable}">
+                                                <CollectionView.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border HeightRequest="31"
+                                                               Background="{Binding Color}"
+                                                               Margin="3"
+                                                               Padding="7,3"
+                                                               HorizontalOptions="Center"
+                                                               VerticalOptions="Center">
+                                                            <Border.StrokeShape>
+                                                                <RoundRectangle CornerRadius="{Binding CornerRadius}" />
+                                                            </Border.StrokeShape>
+                                                            <Border.Triggers>
+                                                            <DataTrigger TargetType="Border" Binding="{Binding Label}" Value="{x:Null}">
+                                                                    <Setter Property="WidthRequest" Value="27" />
+                                                                    <Setter Property="HeightRequest" Value="35" />
+                                                                    <Setter Property="Padding" Value="3" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Border" Binding="{Binding Label}" Value="">
+                                                                    <Setter Property="WidthRequest" Value="27" />
+                                                                    <Setter Property="HeightRequest" Value="35" />
+                                                                    <Setter Property="Padding" Value="3" />
+                                                                </DataTrigger>
+                                                            </Border.Triggers>
+                                                            <Border.GestureRecognizers>
+                                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SlotTapCommand}" CommandParameter="{Binding}" />
+                                                            </Border.GestureRecognizers>
+                                                            <Label x:Name="slotLabel" Text="{Binding Value}"
+                                                                   VerticalOptions="Center"
+                                                                   HorizontalOptions="Center"
+                                                                   FontSize="13"
+                                                                   TextColor="{Binding State, Converter={StaticResource StateToTextColorConverter}}" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </CollectionView.ItemTemplate>
+                                            </CollectionView>
+
+                                            <!-- Picker for stacked layout -->
+                                            <Picker ItemsSource="{Binding Items}"
+                                                    SelectedItem="{Binding SelectedValue}"
+                                                    HeightRequest="34"
+                                                    WidthRequest="120"
+                                                    HorizontalOptions="End"
+                                                    IsVisible="{Binding IsPicker}"
+                                                    SelectedIndexChanged="OnPickerSelectionChanged"
+                                                    IsEnabled="{Binding IsEditable}" />
+
+                                            <!-- Toggle for stacked layout -->
+                                            <HorizontalStackLayout IsVisible="{Binding IsToggle}" VerticalOptions="Center" Spacing="6">
+                                                <Label Text="No" VerticalOptions="Center" />
+                                                <Switch IsToggled="{Binding ToggleValue}" VerticalOptions="Center" IsEnabled="{Binding IsEditable}" />
+                                                <Label Text="Yes" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+
+                                    <!-- Inline layout: title and controls on same row -->
+                                    <HorizontalStackLayout IsVisible="{Binding ForceStacked, Converter={StaticResource InverseBoolConverter}}" Spacing="12" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" 
+                                               FontAttributes="Bold"
+                                               FontSize="14"
+                                               Margin="0"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="StartAndExpand" />
+
+                                        <CollectionView x:Name="SlotsView" ItemsSource="{Binding Slots}"
+                                                        ItemsLayout="HorizontalList" 
+                                                        HeightRequest="40"
+                                                        Margin="0"
+                                                        HorizontalOptions="End"
+                                                        IsVisible="{Binding IsPicker, Converter={StaticResource InverseBoolConverter}}"
+                                                        IsEnabled="{Binding IsEditable}">
+                                            <CollectionView.ItemTemplate>
+                                                <DataTemplate>
+                                                        <Border HeightRequest="31"
+                                                               Background="{Binding Color}"
+                                                               Margin="3"
+                                                               Padding="6,0"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="{Binding CornerRadius}" />
+                                                        </Border.StrokeShape>
+                                                            <Border.Triggers>
+                                                            <DataTrigger TargetType="Border" Binding="{Binding Label}" Value="{x:Null}">
+                                                                    <Setter Property="WidthRequest" Value="31" />
+                                                                <Setter Property="HeightRequest" Value="35" />
+                                                                    <Setter Property="Padding" Value="3" />
+                                                                </DataTrigger>
+                                                                <DataTrigger TargetType="Border" Binding="{Binding Label}" Value="">
+                                                                    <Setter Property="WidthRequest" Value="31" />
+                                                                <Setter Property="HeightRequest" Value="35" />
+                                                                <Setter Property="Padding" Value="3" />
+                                                                </DataTrigger>
+                                                            </Border.Triggers>
+                                                        <Border.GestureRecognizers>
+                                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SlotTapCommand}" CommandParameter="{Binding}" />
+                                                        </Border.GestureRecognizers>
+                                                        <Label x:Name="slotLabel" Text="{Binding Value}" 
+                                                               VerticalOptions="Center" 
+                                                               HorizontalOptions="Center"
+                                                               FontSize="12"
+                                                               TextColor="{Binding State, Converter={StaticResource StateToTextColorConverter}}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </CollectionView.ItemTemplate>
+                                        </CollectionView>
+
+                                        <Picker x:Name="PickerView"
+                                                ItemsSource="{Binding Items}"
+                                                SelectedItem="{Binding SelectedValue}"
+                                                HeightRequest="40"
+                                                WidthRequest="140"
+                                                HorizontalOptions="End"
+                                                IsVisible="{Binding IsPicker}"
+                                                SelectedIndexChanged="OnPickerSelectionChanged"
+                                                IsEnabled="{Binding IsEditable}" />
+
+                                        <HorizontalStackLayout IsVisible="{Binding IsToggle}" VerticalOptions="Center" HorizontalOptions="End" Spacing="6">
+                                            <Label Text="No" VerticalOptions="Center" />
+                                            <Switch IsToggled="{Binding ToggleValue}" VerticalOptions="Center" IsEnabled="{Binding IsEditable}" />
+                                            <Label Text="Yes" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </HorizontalStackLayout>
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Border>
+
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+
+            </VerticalStackLayout>
         </ScrollView>
+
+        <!-- ================= COMPLETION MESSAGE ================= -->
+        <Label Grid.Row="1"
+               Text="🎉🎉 SUCCESS 🎉🎉"
+               TextColor="White"
+               FontSize="26"
+               IsVisible="{Binding IsAllCompleted}"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"/>
+
     </Grid>
 </ContentPage>

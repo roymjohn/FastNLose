@@ -1,473 +1,689 @@
-﻿using FastNLose.Models;
-using Microsoft.Maui.Graphics;
-using Plugin.LocalNotification;
+﻿
+using FastNLose.Models;
+using System;
+using System.Diagnostics;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Timers;
-using Plugin.LocalNotification.AndroidOption;
+using System.Windows.Input;
+using System.Globalization;
+using FastNLose.ViewModels;
 
-namespace FastNLose.ViewModels
+namespace FastNLose.ViewModels;
+
+public class MainPageViewModel : INotifyPropertyChanged
 {
-    public class MainPageViewModel : INotifyPropertyChanged
+    public ObservableCollection<DateItem> VisibleDates { get; } = new();
+
+    public ObservableCollection<SectionViewModel> Categories { get; }
+    = new();
+
+    private DateTime _baseDate;
+
+    private DateTime _selectedDate;
+    public DateTime SelectedDate
     {
-        // ************* FASTING TRACKING ORIGINAL LOGIC (UNCHANGED) *************
-        private DateTime? _startTime;
-        private string _elapsedTime = "00:00:00";
-        private string _totalElapsed = "00:00:00";
-        private System.Timers.Timer _timer;
-
-        private bool _isRunning;
-        private int _daysCount = 0;
-        private int _score;
-        private const int numberOfSessionsConst = 7;
-
-        private TimeSpan totalSoFar = TimeSpan.Zero;
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public int NumberOfSessions => numberOfSessionsConst;
-
-        public ObservableCollection<DailySummary> Progress { get; set; } = new ObservableCollection<DailySummary>();
-
-
-        public int Score
+        get => _selectedDate;
+        set
         {
-            get => _score;
-            set { _score = value; OnPropertyChanged(); }
+            if (_selectedDate == value)
+                return;
+
+            _selectedDate = value;
+            OnPropertyChanged();
+
+            UpdateDateSelection();
+            LoadCategoriesForDate(_selectedDate.Date);
+        }
+    }
+
+    void EvaluateStepsCompletion(DateTime date)
+    {
+        // Forward to SectionViewModel when this instance represents STEPS
+        // Find the section with Key == "STEPS" in Categories (if available)
+        var stepsSection = Categories.FirstOrDefault(c => c.Key == "STEPS");
+        if (stepsSection != null)
+        {
+            stepsSection.EvaluateStepsCompletion(date);
+        }
+    }
+
+    // Public method to refresh current categories for the selected date.
+    public void RefreshCategories()
+    {
+        // Reload data for each existing category so slot states are recalculated against DateTime.Now
+        foreach (var c in Categories)
+        {
+            c.Load(SelectedDate);
         }
 
-        public int DaysCount
+        UpdateAllCompleted();
+    }
+
+    void ClearPrefsBefore(DateTime cutoff)
+    {
+        var keys = new[] { "WATER", "STEPS", "WORKOUT", "WALK", "BAN", "SUGAR_8AM", "WEIGHT" };
+        // remove entries for the last 365 days before cutoff
+        for (int d = 0; d < 365; d++)
         {
-            get => _daysCount;
-            set { _daysCount = value; OnPropertyChanged(); }
-        }
-
-        public bool IsRunning
-        {
-            get => _isRunning;
-            set { _isRunning = value; OnPropertyChanged(); }
-        }
-
-        public string ElapsedTime
-        {
-            get => _elapsedTime;
-            set { _elapsedTime = value; OnPropertyChanged(); }
-        }
-
-        public string TotalElapsedTime
-        {
-            get => _totalElapsed;
-            set { _totalElapsed = value; OnPropertyChanged(); }
-        }
-
-        public TimeSpan TotalSoFar
-        {
-            get => totalSoFar;
-            set { totalSoFar = value; OnPropertyChanged(); }
-        }
-
-        // ************************************************************************
-        // *************   DAILY H2O + WKT SYSTEM (NEW LOGIC)   *******************
-        // ************************************************************************
-
-        private const int COUNT = 9;
-
-        private int[] h2oStates = new int[COUNT]; // 0=yellow, 1=red, 2=green
-        private int[] wktStates = new int[COUNT];
-
-        private Color[] h2oColors = new Color[COUNT];
-        private Color[] wktColors = new Color[COUNT];
-
-        private bool[] h2oEnabled = new bool[COUNT];
-        private bool[] wktEnabled = new bool[COUNT];
-
-        // The 9 schedule slot hours: every 2 hrs from 7AM → 23PM
-        private readonly int[] slotHours = { 5, 7, 9, 11, 13, 15, 17, 19, 21 };
-
-
-        // --- Bindable Color Properties (H2O) ---
-        public Color H2OColor1 { get => h2oColors[0]; set { h2oColors[0] = value; OnPropertyChanged(); } }
-        public Color H2OColor2 { get => h2oColors[1]; set { h2oColors[1] = value; OnPropertyChanged(); } }
-        public Color H2OColor3 { get => h2oColors[2]; set { h2oColors[2] = value; OnPropertyChanged(); } }
-        public Color H2OColor4 { get => h2oColors[3]; set { h2oColors[3] = value; OnPropertyChanged(); } }
-        public Color H2OColor5 { get => h2oColors[4]; set { h2oColors[4] = value; OnPropertyChanged(); } }
-        public Color H2OColor6 { get => h2oColors[5]; set { h2oColors[5] = value; OnPropertyChanged(); } }
-        public Color H2OColor7 { get => h2oColors[6]; set { h2oColors[6] = value; OnPropertyChanged(); } }
-        public Color H2OColor8 { get => h2oColors[7]; set { h2oColors[7] = value; OnPropertyChanged(); } }
-        public Color H2OColor9 { get => h2oColors[8]; set { h2oColors[8] = value; OnPropertyChanged(); } }
-
-        // --- Bindable Enabled Properties (H2O) ---
-        public bool H2OEnabled1 { get => h2oEnabled[0]; set { h2oEnabled[0] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled2 { get => h2oEnabled[1]; set { h2oEnabled[1] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled3 { get => h2oEnabled[2]; set { h2oEnabled[2] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled4 { get => h2oEnabled[3]; set { h2oEnabled[3] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled5 { get => h2oEnabled[4]; set { h2oEnabled[4] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled6 { get => h2oEnabled[5]; set { h2oEnabled[5] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled7 { get => h2oEnabled[6]; set { h2oEnabled[6] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled8 { get => h2oEnabled[7]; set { h2oEnabled[7] = value; OnPropertyChanged(); } }
-        public bool H2OEnabled9 { get => h2oEnabled[8]; set { h2oEnabled[8] = value; OnPropertyChanged(); } }
-
-
-        // --- Bindable Color Properties (WKT) ---
-        public Color WKTColor1 { get => wktColors[0]; set { wktColors[0] = value; OnPropertyChanged(); } }
-        public Color WKTColor2 { get => wktColors[1]; set { wktColors[1] = value; OnPropertyChanged(); } }
-        public Color WKTColor3 { get => wktColors[2]; set { wktColors[2] = value; OnPropertyChanged(); } }
-        public Color WKTColor4 { get => wktColors[3]; set { wktColors[3] = value; OnPropertyChanged(); } }
-        public Color WKTColor5 { get => wktColors[4]; set { wktColors[4] = value; OnPropertyChanged(); } }
-        public Color WKTColor6 { get => wktColors[5]; set { wktColors[5] = value; OnPropertyChanged(); } }
-        public Color WKTColor7 { get => wktColors[6]; set { wktColors[6] = value; OnPropertyChanged(); } }
-        public Color WKTColor8 { get => wktColors[7]; set { wktColors[7] = value; OnPropertyChanged(); } }
-        public Color WKTColor9 { get => wktColors[8]; set { wktColors[8] = value; OnPropertyChanged(); } }
-
-        // --- Bindable Enabled Properties (WKT) ---
-        public bool WKTEnabled1 { get => wktEnabled[0]; set { wktEnabled[0] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled2 { get => wktEnabled[1]; set { wktEnabled[1] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled3 { get => wktEnabled[2]; set { wktEnabled[2] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled4 { get => wktEnabled[3]; set { wktEnabled[3] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled5 { get => wktEnabled[4]; set { wktEnabled[4] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled6 { get => wktEnabled[5]; set { wktEnabled[5] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled7 { get => wktEnabled[6]; set { wktEnabled[6] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled8 { get => wktEnabled[7]; set { wktEnabled[7] = value; OnPropertyChanged(); } }
-        public bool WKTEnabled9 { get => wktEnabled[8]; set { wktEnabled[8] = value; OnPropertyChanged(); } }
-
-
-        // ***********************************************************************
-
-        public MainPageViewModel()
-        {
-            InitH2O();
-            InitWKT();
-
-            // timer
-            _timer = new System.Timers.Timer(1000);
-            _timer.Elapsed += (s, e) => TimerTick();
-        }
-
-
-        // ******** INITIALIZATION ********
-
-        private void InitH2O()
-        {
-            for (int i = 0; i < COUNT; i++)
+            var dt = cutoff.AddDays(-d - 1);
+            foreach (var k in keys)
             {
-                h2oStates[i] = 0;
-                h2oColors[i] = Yellow();
-                h2oEnabled[i] = false;
+                Preferences.Remove($"{k}_{dt:yyyyMMdd}");
             }
         }
+        
 
-        private void InitWKT()
+    }
+
+    public SectionViewModel Water { get; }
+    public SectionViewModel Steps { get; }
+    public SectionViewModel Workout { get; }
+    public SectionViewModel Walk { get; }
+    public SectionViewModel Evils { get; }
+
+    private bool _isAllCompleted;
+    public bool IsAllCompleted
+    {
+        get => _isAllCompleted;
+        set { _isAllCompleted = value; OnPropertyChanged(); }
+    }
+
+    private const int PageSize = 4;
+
+    private DateTime _startDate = DateTime.Today;
+
+    public DateTime StartDate
+    {
+        get => _startDate;
+        set
         {
-            for (int i = 0; i < COUNT; i++)
+            if (_startDate != value)
             {
-                wktStates[i] = 0;
-                wktColors[i] = Yellow();
-                wktEnabled[i] = false;
+                _startDate = value;
+                OnPropertyChanged();
+                RefreshVisibleDates();
+                UpdateCanPrev();
             }
         }
-
-        private Color Yellow() => Color.FromArgb("#FFD54F");
-
-
-        // ******** PUBLIC INITIALIZER CALLED BY PAGE ********
-
-        public async Task InitializeAsync()
-        {
-            // Load score
-            Score = (await App.Database.GetSettingsAsync())?.Score ?? 0;
-
-            LoadDailyState();
-
-            UpdateDailyButtons();
-
-            BuildProgressTable();
-
         }
 
+    private const int DaysToShow = 4;
 
-        // ******** FASTING START / STOP (existing behavior preserved) ********
+    private void RefreshVisibleDates()
+    {
+        VisibleDates.Clear();
 
-        public void Start(DateTime? startTime = null)
+        for (int i = 0; i < PageSize; i++)
         {
-            if (IsRunning) return;
-
-            _startTime = startTime ?? DateTime.Now;
-            Preferences.Set("ActiveSessionStart", _startTime.Value.Ticks);
-
-            IsRunning = true;
-            _timer.Start();
-
-            UpdateElapsedTime();
-        }
-
-        public void Stop()
-        {
-            if (!IsRunning) return;
-
-            _timer.Stop();
-            IsRunning = false;
-
-            Preferences.Remove("ActiveSessionStart");
-
-            UpdateElapsedTime();
-            BuildProgressTable();
-
-        }
-
-
-        // ******** TIMER TICK ********
-
-        private void TimerTick()
-        {
-            UpdateElapsedTime();
-            UpdateDailyButtons();
-        }
-
-
-        private void UpdateElapsedTime()
-        {
-            if (!_startTime.HasValue) return;
-
-            var span = DateTime.Now - _startTime.Value;
-
-            ElapsedTime = span.ToString(@"dd\:hh\:mm\:ss");
-            TotalElapsedTime = (TotalSoFar + span).ToString(@"dd\:hh\:mm\:ss");
-        }
-
-
-        // ***********************************************************************
-        // ******** DAILY BUTTON LOGIC (H2O + WKT) *******************************
-        // ***********************************************************************
-
-        private void UpdateDailyButtons()
-        {
-            var now = DateTime.Now;
-
-            // Reset if a new day
-            var today = now.ToString("yyyy-MM-dd");
-            var lastDay = Preferences.Get("DailyReset", "");
-
-            if (today != lastDay)
+            VisibleDates.Add(new DateItem
             {
-                InitH2O();
-                InitWKT();
-                Preferences.Set("DailyReset", today);
-            }
-
-            ApplyScheduleRules(h2oStates, h2oColors, h2oEnabled, "H2O");
-            ApplyScheduleRules(wktStates, wktColors, wktEnabled, "WKT");
-
-            ApplyToBindableProperties();
-
-            SaveDailyState();
+                Date = StartDate.AddDays(i)
+            });
         }
 
+        // Select today if visible, otherwise auto-select first date
+        var today = DateTime.Today;
+        var todayItem = VisibleDates.FirstOrDefault(d => d.Date.Date == today);
+        var toSelect = todayItem != null ? todayItem.Date : VisibleDates.FirstOrDefault().Date;
+        // set SelectedDate via property to update selection UI
+        SelectedDate = toSelect;
+        // ensure start date is first visible date
+        if (_baseDate > VisibleDates[0].Date)
+            StartDate = _baseDate;
+        UpdateCanPrev();
+    }
 
-        private void ApplyScheduleRules(int[] states, Color[] colors, bool[] enabled, string groupName)
+    void UpdateCanPrev()
+    {
+        CanPrev = VisibleDates.Count > 0 && StartDate > _baseDate;
+        // notify command can execute changed
+        (PrevDatesCommand as Command)?.ChangeCanExecute();
+    }
+
+    private void UpdateDateSelection()
+    {
+        foreach (var d in VisibleDates)
+            d.IsSelected = (d.Date.Date == SelectedDate.Date);
+    }
+
+    public ICommand SelectDateCommand => new Command<DateItem>(date =>
+    {
+        SelectedDate = date.Date;
+    });
+
+    public ICommand SlotTapCommand => new Command<SlotViewModel>(slot =>
+    {
+        slot.Toggle(SelectedDate);
+    });
+
+
+    public ICommand NextDatesCommand { get; private set; }
+    public ICommand PrevDatesCommand { get; private set; }
+
+    bool _canPrev;
+    public bool CanPrev
+    {
+        get => _canPrev;
+        set { if (_canPrev == value) return; _canPrev = value; OnPropertyChanged(); }
+    }
+
+    void BuildVisibleDates()
+    {
+        VisibleDates.Clear();
+        for (int i = 0; i < PageSize; i++)
         {
-            var now = DateTime.Now;
-
-            for (int i = 0; i < COUNT; i++)
+            var d = StartDate.AddDays(i);
+            VisibleDates.Add(new DateItem
             {
-                int slotHour = slotHours[i];
-                var slotTime = new DateTime(now.Year, now.Month, now.Day, slotHour, 0, 0);
-
-                // If current time passed slot and it's still yellow → red
-                if (now >= slotTime)
-                {
-                    if (states[i] == 0)
-                    {
-                        states[i] = 1;
-                        TriggerRedAlert(i, groupName);
-                    }
-                }
-
-                // Assign colors & enabled states
-                if (states[i] == 0)
-                {
-                    colors[i] = Yellow();
-                    enabled[i] = false;
-                }
-                else if (states[i] == 1)
-                {
-                    colors[i] = Colors.Red;
-                    enabled[i] = true;
-                }
-                else // green
-                {
-                    colors[i] = Colors.Green;
-                    enabled[i] = false;
-                }
-            }
-        }
-
-
-
-        // ******** CLICK HANDLERS FROM UI (only red → green allowed) ********
-
-        public void ToggleH2O(int index)
-        {
-            if (h2oStates[index] != 1) return; // only red clickable
-            h2oStates[index] = 2;
-            UpdateDailyButtons();
-            BuildProgressTable();
-
-        }
-
-        public void ToggleWKT(int index)
-        {
-            if (wktStates[index] != 1) return;
-            wktStates[index] = 2;
-            UpdateDailyButtons();
-            BuildProgressTable();
-
-        }
-
-
-        // ******** PERSISTENCE ********
-
-        private void SaveDailyState()
-        {
-            string today = DateTime.Now.ToString("yyyy-MM-dd");
-
-            Preferences.Set("H2O_" + today, JsonSerializer.Serialize(h2oStates));
-            Preferences.Set("WKT_" + today, JsonSerializer.Serialize(wktStates));
-        }
-
-        private void LoadDailyState()
-        {
-            string today = DateTime.Now.ToString("yyyy-MM-dd");
-
-            string h2oJson = Preferences.Get("H2O_" + today, "");
-            string wktJson = Preferences.Get("WKT_" + today, "");
-
-            if (!string.IsNullOrEmpty(h2oJson))
-                h2oStates = JsonSerializer.Deserialize<int[]>(h2oJson) ?? new int[COUNT];
-
-            if (!string.IsNullOrEmpty(wktJson))
-                wktStates = JsonSerializer.Deserialize<int[]>(wktJson) ?? new int[COUNT];
-
-            UpdateDailyButtons();
-        }
-
-
-        // ******** PUSH TO BINDABLE PROPERTIES ********
-
-        private void ApplyToBindableProperties()
-        {
-            // H2O
-            H2OColor1 = h2oColors[0]; H2OEnabled1 = h2oEnabled[0];
-            H2OColor2 = h2oColors[1]; H2OEnabled2 = h2oEnabled[1];
-            H2OColor3 = h2oColors[2]; H2OEnabled3 = h2oEnabled[2];
-            H2OColor4 = h2oColors[3]; H2OEnabled4 = h2oEnabled[3];
-            H2OColor5 = h2oColors[4]; H2OEnabled5 = h2oEnabled[4];
-            H2OColor6 = h2oColors[5]; H2OEnabled6 = h2oEnabled[5];
-            H2OColor7 = h2oColors[6]; H2OEnabled7 = h2oEnabled[6];
-            H2OColor8 = h2oColors[7]; H2OEnabled8 = h2oEnabled[7];
-            H2OColor9 = h2oColors[8]; H2OEnabled9 = h2oEnabled[8];
-
-            // WKT
-            WKTColor1 = wktColors[0]; WKTEnabled1 = wktEnabled[0];
-            WKTColor2 = wktColors[1]; WKTEnabled2 = wktEnabled[1];
-            WKTColor3 = wktColors[2]; WKTEnabled3 = wktEnabled[2];
-            WKTColor4 = wktColors[3]; WKTEnabled4 = wktEnabled[3];
-            WKTColor5 = wktColors[4]; WKTEnabled5 = wktEnabled[4];
-            WKTColor6 = wktColors[5]; WKTEnabled6 = wktEnabled[5];
-            WKTColor7 = wktColors[6]; WKTEnabled7 = wktEnabled[6];
-            WKTColor8 = wktColors[7]; WKTEnabled8 = wktEnabled[7];
-            WKTColor9 = wktColors[8]; WKTEnabled9 = wktEnabled[8];
-        }
-
-        public void BuildProgressTable()
-        {
-            Progress.Clear();
-
-            for (int i = 0; i < 7; i++)
-            {
-                DateTime day = DateTime.Today.AddDays(-i);
-                string key = day.ToString("yyyy-MM-dd");
-
-                // Load H2O
-                string h2oJson = Preferences.Get("H2O_" + key, "");
-                int[] h2o = string.IsNullOrEmpty(h2oJson) ? new int[9] :
-                               (JsonSerializer.Deserialize<int[]>(h2oJson) ?? new int[9]);
-
-                int h2Count = h2o.Count(x => x == 2);   // green only
-
-                // Load WKT
-                string wktJson = Preferences.Get("WKT_" + key, "");
-                int[] wkt = string.IsNullOrEmpty(wktJson) ? new int[9] :
-                               (JsonSerializer.Deserialize<int[]>(wktJson) ?? new int[9]);
-
-                int wktCount = wkt.Count(x => x == 2);
-
-                // Fasting total (load from DB)
-                var items = App.Database.GetTrackingItemsAsync().Result;
-                var todaysSessions = items
-                    .Where(t => t.StartTime.Date == day.Date && t.EndTime != null)
-                    .ToList();
-
-                TimeSpan fasting = TimeSpan.Zero;
-                foreach (var s in todaysSessions)
-                    fasting += (s.EndTime.Value - s.StartTime);
-
-                string fastingStr = $"{(int)fasting.TotalHours:D2}:{fasting.Minutes:D2}";
-
-
-                Progress.Add(new DailySummary
-                {
-                    Date = day.ToString("MM/dd"),
-                    H2 = h2Count,
-                    Wk = wktCount,
-                    Fs = fastingStr
-                });
-            }
-        }
-
-
-        private async void TriggerRedAlert(int index, string group)
-        {
-            try
-            {
-                // Vibrate as before
-                Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(120));
-            }
-            catch { }
-
-            // ---- REAL SYSTEM NOTIFICATION ----
-            var request = new NotificationRequest
-            {
-                NotificationId = 1000 + index + (group == "WKT" ? 100 : 0),
-                Title = $"{group} Slot {index + 1}",
-                Description = $"Slot {index + 1} is now active.",
-                CategoryType = NotificationCategoryType.Reminder,
-                Schedule =
-        {
-            NotifyTime = DateTime.Now // show immediately
-        }
-            };
-
-            await LocalNotificationCenter.Current.Show(request);
-        }
-
-        public void RefreshAllSlots()
-        {
-            UpdateElapsedTime();  // recalculates red/yellow/green
-            UpdateDailyButtons();
-        }
-
-
-
-        // ******** PROPERTY CHANGED ********
-
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+                Date = d,
+  
             });
         }
     }
+
+    public MainPageViewModel()
+    {
+        _baseDate = Preferences.Get("START_DATE", DateTime.Today);
+        InitDates(_baseDate);
+
+        Water = SectionViewModel.Create("WATER", 8, 6, 2, 6);
+        // create Steps picker backing VM so LoadDay can use it; items same as CategoryFactory
+        Steps = SectionViewModel.Create("STEPS", 0, 0, 1, 0);
+        Steps.IsPicker = true;
+        var stepsItems = new List<string>();
+        for (int v = 5000; v <= 12000; v += 500)
+            stepsItems.Add(v.ToString());
+        Steps.Items = stepsItems;
+        Workout = SectionViewModel.Create("WORKOUT", 6, 6, 3, 4);
+        Walk = SectionViewModel.Create("WALK", 6, 6, 3, 6);
+        Walk.Title = "WALK-5min";
+        Evils = SectionViewModel.Create("EVILS", 4, 6, 5, 4, true);
+
+        // Initialize visible dates and select today if present
+        RefreshVisibleDates();
+
+        NextDatesCommand = new Command(() => StartDate = StartDate.AddDays(PageSize));
+        PrevDatesCommand = new Command(() => StartDate = StartDate.AddDays(-PageSize), () => CanPrev);
+        UpdateCanPrev();
+    }
+
+    public void SetStartDateAndClear(DateTime newStart)
+    {
+        // save new start date
+        Preferences.Set("START_DATE", newStart);
+        _baseDate = newStart;
+
+        // clear prefs before new start
+        ClearPrefsBefore(newStart);
+
+        // Update visible dates to not show dates before base
+        InitDates(newStart);
+        RefreshVisibleDates();
+    }
+
+    void InitDates(DateTime start)
+    {
+        VisibleDates.Clear();
+        for (int i = 0; i < PageSize; i++)
+            VisibleDates.Add(new DateItem
+            {
+                Date = start.AddDays(i),
+
+            });
+    }
+
+    public void MoveDates(int delta)
+    {
+        var newStart = VisibleDates[0].Date.AddDays(delta);
+        if (newStart < _baseDate) return;
+        InitDates(newStart);
+        SelectedDate = VisibleDates[0].Date;
+    }
+
+    void LoadDay(DateTime date)
+    {
+        Water.Load(date);
+        Steps.Load(date);
+        Workout.Load(date);
+        Walk.Load(date);
+        Evils.Load(date);
+
+        IsAllCompleted =
+            Water.IsCompleted &&
+            Steps.IsCompleted &&
+            Workout.IsCompleted &&
+            Walk.IsCompleted &&
+            Evils.IsCompleted;
+    }
+
+    private void LoadCategoriesForDate(DateTime date)
+    {
+        // Unsubscribe from previous category change notifications
+        foreach (var c in Categories.ToList())
+            c.PropertyChanged -= Category_PropertyChanged;
+
+        Categories.Clear();
+
+        // Build and subscribe to new categories
+        void addAndSubscribe(SectionViewModel s)
+        {
+            Categories.Add(s);
+            s.PropertyChanged += Category_PropertyChanged;
+        }
+
+        addAndSubscribe(CategoryFactory.BuildWater(date));
+        addAndSubscribe(CategoryFactory.BuildWorkout(date));
+        addAndSubscribe(CategoryFactory.BuildWalk(date));
+        addAndSubscribe(CategoryFactory.BuildBan(date));
+        addAndSubscribe(CategoryFactory.BuildYesNo("16Hr Fast", date));
+        addAndSubscribe(CategoryFactory.BuildWeight(date));
+        addAndSubscribe(CategoryFactory.BuildSugar8AM(date));
+        // Steps picker section placed at the end
+        addAndSubscribe(CategoryFactory.BuildSteps(date));
+
+        UpdateAllCompleted();
+    }
+
+    void Category_PropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        // Any meaningful change in a section (Background/IsCompleted) should re-evaluate overall completion
+        UpdateAllCompleted();
+    }
+
+    private void UpdateAllCompleted()
+    {
+        // If there are no categories treat as not completed.
+        IsAllCompleted = Categories.Any() && Categories.All(c => c.IsCompleted);
+        OnPropertyChanged(nameof(IsAllCompleted));
+    }
+
+
+    public event PropertyChangedEventHandler PropertyChanged;
+    void OnPropertyChanged([CallerMemberName] string n = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+}
+
+/* ---------------- SECTION VM ---------------- */
+
+public class SectionViewModel : INotifyPropertyChanged
+{
+    public ObservableCollection<SlotViewModel> Slots { get; } = new();
+    public string Key { get; private set; }
+    // Title shown in UI; can be friendly text independent of storage Key
+    public string Title { get; set; }
+    public string Name => Title ?? Key;
+    // Controls whether the layout shows title above controls
+    public bool ForceStacked { get; set; }
+        // whether this section can be edited for the currently loaded date
+        public bool IsEditable { get; private set; }
+    int _requiredGreen;
+    DateTime? _loadedDate;
+    bool _suppressSave;
+    // spacing between slot items in the UI (pixels)
+    public double SlotItemSpacing { get; set; } = 7;
+    bool _isFailed;
+    public bool IsFailed
+    {
+        get => _isFailed;
+        private set { if (_isFailed == value) return; _isFailed = value; OnPropertyChanged(); }
+    }
+
+    // If true this section is represented by a Picker (single selection)
+    public bool IsPicker { get; set; }
+    public IList<string> Items { get; set; }
+    string _selectedValue;
+    public string SelectedValue
+    {
+        get => _selectedValue;
+        set
+        {
+            if (_selectedValue == value) return;
+            _selectedValue = value;
+            OnPropertyChanged();
+            // Save when not suppressed (i.e. when change is from the user)
+            if (!_suppressSave && _loadedDate.HasValue)
+                Save(_loadedDate.Value);
+
+            // Special logic for SUGAR_8AM and WEIGHT when determining completion color
+            if ((_loadedDate.HasValue) && (Key == "SUGAR_8AM" || Key == "WEIGHT"))
+            {
+                try
+                {
+                    var today = _loadedDate.Value.Date;
+                    var prevDate = today.AddDays(-1);
+                    var prevKey = $"{Key}_{prevDate:yyyyMMdd}";
+                    var prevStr = Preferences.Get(prevKey, string.Empty);
+
+                    // If previous value exists, apply sugar-specific comparison, otherwise
+                    // treat any user change from the default as completion (green).
+                    if (!string.IsNullOrEmpty(prevStr) && double.TryParse(prevStr, out var prevVal) && double.TryParse(_selectedValue, out var currVal))
+                    {
+                        if (Key == "SUGAR_8AM")
+                        {
+                            // sugar: completed if at least 0.5 less than previous
+                            IsCompleted = currVal <= prevVal - 0.5;
+                        }
+                        else
+                        {
+                            // weight: if previous exists, consider changed value as completed
+                            IsCompleted = Math.Abs(currVal - prevVal) > 0.0001;
+                        }
+                    }
+                    else
+                    {
+                        // No previous value: if user changed from the default item mark completed.
+                        if (Items != null && Items.Count > 0)
+                        {
+                            var defaultVal = Items[0];
+                            IsCompleted = _selectedValue != defaultVal && !string.IsNullOrEmpty(_selectedValue);
+                        }
+                        else
+                        {
+                            // no items to compare to — mark completed if a non-empty value set
+                            IsCompleted = !string.IsNullOrEmpty(_selectedValue);
+                        }
+                    }
+                }
+                catch
+                {
+                    IsCompleted = false;
+                }
+
+                OnPropertyChanged(nameof(Background));
+            }
+        }
+    }
+
+    // If true this section is represented by a toggle (Switch)
+    public bool IsToggle { get; set; }
+    bool _toggleValue;
+    public bool ToggleValue
+    {
+        get => _toggleValue;
+        set
+        {
+            if (_toggleValue == value) return;
+            _toggleValue = value;
+            OnPropertyChanged();
+            // Persist toggle and update completion state for toggle sections
+            Save();
+            if (_loadedDate.HasValue)
+            {
+                // For toggle sections, consider completion when true
+                IsCompleted = _toggleValue;
+                OnPropertyChanged(nameof(Background));
+            }
+        }
+    }
+
+    public bool IsCompleted { get; private set; }
+    public Color Background => IsCompleted ? Colors.LightGreen : (IsFailed ? Color.FromArgb("#FFCDD2") : Colors.Transparent);
+
+    public static SectionViewModel Create(string key, int count, int startHour, int interval, int required, bool rectangle = false)
+    {
+        var vm = new SectionViewModel { Key = key, _requiredGreen = required };
+        vm.Title = key.Replace('_', ' ');
+        for (int i = 0; i < count; i++)
+            vm.Slots.Add(new SlotViewModel(startHour + i * interval, rectangle, vm));
+        // Force stacked layout for these multi-slot sections
+        if (key == "WATER" || key == "STEPS" || key == "WORKOUT" || key == "WALK" || key == "BAN")
+            vm.ForceStacked = true;
+        return vm;
+    }
+
+    public static SectionViewModel CreateLabeled(string key, string[] labels)
+    {
+        var vm = new SectionViewModel { Key = key, _requiredGreen = labels.Length };
+        vm.Title = key.Replace('_', ' ');
+        // Force stacked layout for labeled sections (like BAN)
+        if (key == "BAN")
+            vm.ForceStacked = true;
+        foreach (var lab in labels)
+        {
+            var s = new SlotViewModel(0, true, vm) { Label = ToCamelCase(lab) };
+            vm.Slots.Add(s);
+        }
+        return vm;
+    }
+
+    static string ToCamelCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return input;
+        var lower = input.ToLowerInvariant();
+        return char.ToUpperInvariant(lower[0]) + lower.Substring(1);
+    }
+
+    public void Load(DateTime date)
+    {
+        _loadedDate = date;
+
+        // editable only for today or past dates
+        IsEditable = date.Date <= DateTime.Today;
+        OnPropertyChanged(nameof(IsEditable));
+
+        if (Slots.Count > 0)
+        {
+            var json = Preferences.Get($"{Key}_{date:yyyyMMdd}", "");
+            int[] states = string.IsNullOrEmpty(json)
+                ? new int[Slots.Count]
+                : JsonSerializer.Deserialize<int[]>(json);
+
+            for (int i = 0; i < Slots.Count; i++)
+                Slots[i].SetState(states[i], date);
+
+            UpdateCompletion();
+        }
+        else if (IsPicker)
+        {
+            var val = Preferences.Get($"{Key}_{date:yyyyMMdd}", string.Empty);
+            Debug.WriteLine($"Load picker: key={Key}_{date:yyyyMMdd} value='{val}' itemsCount={(Items?.Count ?? 0)}");
+            _suppressSave = true;
+            string chosen = null;
+            if (!string.IsNullOrEmpty(val))
+            {
+                if (Items != null && Items.Count > 0)
+                {
+                    // exact match
+                    var idx = Items.IndexOf(val);
+                    if (idx >= 0)
+                        chosen = Items[idx];
+                    else
+                    {
+                        // case-insensitive match
+                        var match = Items.FirstOrDefault(it => string.Equals(it, val, StringComparison.InvariantCultureIgnoreCase));
+                        if (match != null)
+                            chosen = match;
+                        else
+                        {
+                            // try numeric match (handles culture/format differences)
+                            if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+                            {
+                                var numMatch = Items.FirstOrDefault(it => double.TryParse(it, NumberStyles.Any, CultureInfo.InvariantCulture, out var itv) && Math.Abs(itv - v) < 0.0001);
+                                if (numMatch != null)
+                                    chosen = numMatch;
+                            }
+                        }
+                    }
+                }
+                // fallback to raw val if no chosen found
+                if (chosen == null)
+                    chosen = val;
+            }
+            else if (Items != null && Items.Count > 0)
+            {
+                chosen = Items[0];
+            }
+
+            // Apply chosen value through the property so completion logic runs.
+            _suppressSave = true;
+            SelectedValue = chosen;
+            _suppressSave = false;
+            // Special handling for STEPS picker: evaluate against previous 3 days
+            if (Key == "STEPS")
+            {
+                EvaluateStepsCompletion(date);
+            }
+        }
+        else if (IsToggle)
+        {
+            var val = Preferences.Get($"{Key}_{date:yyyyMMdd}", "0");
+            ToggleValue = val == "1";
+        }
+    }
+
+    public void Save(DateTime date)
+    {
+        if (Slots.Count > 0)
+        {
+            Preferences.Set($"{Key}_{date:yyyyMMdd}",
+                JsonSerializer.Serialize(Slots.Select(s => s.State)));
+            Debug.WriteLine($"Save slots: key={Key}_{date:yyyyMMdd}");
+        }
+        else if (IsPicker)
+        {
+            if (SelectedValue != null)
+            {
+                Preferences.Set($"{Key}_{date:yyyyMMdd}", SelectedValue ?? string.Empty);
+                Debug.WriteLine($"Save picker: key={Key}_{date:yyyyMMdd} value='{SelectedValue ?? string.Empty}'");
+                if (Key == "STEPS")
+                {
+                    // Re-evaluate step completion after save
+                    EvaluateStepsCompletion(date);
+                }
+            }
+        }
+        else if (IsToggle)
+        {
+            Preferences.Set($"{Key}_{date:yyyyMMdd}", ToggleValue ? "1" : "0");
+        }
+    }
+
+    // Save using the last loaded date
+    public void Save()
+    {
+        if (_loadedDate.HasValue)
+            Save(_loadedDate.Value);
+    }
+
+    // Evaluate steps for this section if key is STEPS
+    public void EvaluateStepsCompletion(DateTime date)
+    {
+        if (Key != "STEPS") return;
+        try
+        {
+            var key = $"{Key}_{date:yyyyMMdd}";
+            var todayStr = Preferences.Get(key, string.Empty);
+            if (!int.TryParse(todayStr, out var todaySteps))
+            {
+                IsFailed = false;
+                IsCompleted = false;
+                OnPropertyChanged(nameof(Background));
+                return;
+            }
+
+            var prevValues = new List<int>();
+            for (int i = 1; i <= 3; i++)
+            {
+                var d = date.AddDays(-i);
+                var s = Preferences.Get($"{Key}_{d:yyyyMMdd}", string.Empty);
+                if (int.TryParse(s, out var v)) prevValues.Add(v);
+            }
+
+            // Compute average of up to 3 previous days; if none available average is 0
+            var avg = prevValues.Count > 0 ? (int)Math.Round(prevValues.Average()) : 0;
+            if (todaySteps > avg)
+            {
+                IsCompleted = true;
+                IsFailed = false;
+            }
+            else if (todaySteps < avg)
+            {
+                IsCompleted = false;
+                IsFailed = true;
+            }
+            else
+            {
+                IsCompleted = false;
+                IsFailed = false;
+            }
+
+            OnPropertyChanged(nameof(Background));
+        }
+        catch
+        {
+        }
+    }
+
+    internal void UpdateCompletion()
+    {
+        IsCompleted = Slots.Count(s => s.State == 2) >= _requiredGreen;
+        OnPropertyChanged(nameof(Background));
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+    void OnPropertyChanged([CallerMemberName] string n = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+}
+
+/* ---------------- SLOT VM ---------------- */
+
+public class SlotViewModel : INotifyPropertyChanged
+{
+    public int Hour { get; }
+    public int State { get; private set; }   // 0 yellow, 1 red, 2 green
+    readonly bool _rectangle;
+    readonly SectionViewModel _parent;
+
+    public bool IsClickable => State == 1;
+
+    public Color Color => State switch
+    {
+        0 => Color.FromArgb("#FFF59D"), // lighter yellow
+        1 => Colors.Red,
+        _ => Colors.Green
+    };
+
+    public int CornerRadius => _rectangle ? 4 : 10;
+
+    // Display value used by the UI. For now show the hour.
+    public string Label { get; set; }
+    public string Value => !string.IsNullOrEmpty(Label) ? Label : Hour.ToString();
+
+    public SlotViewModel(int hour, bool rectangle, SectionViewModel parent)
+    {
+        Hour = hour;
+        _rectangle = rectangle;
+        _parent = parent;
+    }
+
+    public void SetState(int saved, DateTime date)
+    {
+        var slotTime = date.AddHours(Hour);
+        State = (DateTime.Now >= slotTime && saved == 0) ? 1 : saved;
+        OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(Color));
+        OnPropertyChanged(nameof(IsClickable));
+    }
+
+    public void Toggle(DateTime date)
+    {
+        // Only allow transitioning red -> green on user tap
+        if (State == 1)
+        {
+            State = 2;
+            _parent.Save(date);
+            _parent.UpdateCompletion();
+            OnPropertyChanged(nameof(State));
+            OnPropertyChanged(nameof(Color));
+            OnPropertyChanged(nameof(IsClickable));
+        }
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+    void OnPropertyChanged([CallerMemberName] string n = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 }

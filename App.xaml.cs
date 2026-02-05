@@ -15,25 +15,17 @@ public partial class App : Application
         InitializeComponent();
         dbPath = Path.Combine(FileSystem.AppDataDirectory, "fastnlose.db3");
         Database = new DatabaseService(dbPath);
-        MainPage = new NavigationPage(new Pages.MainPage());
+        MainPage = new MainPage();
     }
 
     protected override void OnResume()
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            if (Current?.MainPage is MainPage mp)
-                mp.ForceDailyRefresh();
+           if (Current?.MainPage is MainPage mp)
+               mp.ForceDailyRefresh();
         });
     }
 
 }
 
-public class InverseBoolConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => !(bool)value;
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => !(bool)value;
-}
