@@ -2,6 +2,7 @@
 using FastNLose.Services;
 using Microsoft.Extensions.Logging;
 using Plugin.LocalNotification;
+using Microsoft.Maui.Storage;
 
 namespace FastNLose
 {
@@ -24,7 +25,7 @@ namespace FastNLose
             string dbPath = Path.Combine(FileSystem.AppDataDirectory, "FastNLose.db3");
             builder.Services.AddSingleton(new DatabaseService(dbPath));
 
-            builder.Services.AddTransient<Pages.MainPage>();
+            builder.Services.AddTransient<MainPage>();
             builder.Services.AddTransient<Pages.SettingsPage>();
 
 #if DEBUG
