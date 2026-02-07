@@ -198,8 +198,9 @@ public class MainPageViewModel : INotifyPropertyChanged
             stepsItems.Add(v.ToString());
         Steps.Items = stepsItems;
         Workout = SectionViewModel.Create("WORKOUT", 6, 6, 3, 4);
+        Workout.Title = "WORKOUT-5m";
         Walk = SectionViewModel.Create("WALK", 6, 6, 3, 6);
-        Walk.Title = "WALK-5min";
+        Walk.Title = "WALK-RUN-5m";
         Evils = SectionViewModel.Create("EVILS", 4, 6, 5, 4, true);
 
         // Initialize visible dates and select today if present
@@ -277,6 +278,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         addAndSubscribe(CategoryFactory.BuildWater(date));
         addAndSubscribe(CategoryFactory.BuildWorkout(date));
         addAndSubscribe(CategoryFactory.BuildWalk(date));
+        addAndSubscribe(CategoryFactory.BuildYes(date));
         addAndSubscribe(CategoryFactory.BuildBan(date));
         addAndSubscribe(CategoryFactory.BuildYesNo("16Hr Fast", date));
         addAndSubscribe(CategoryFactory.BuildWeight(date));
@@ -353,46 +355,56 @@ public class SectionViewModel : INotifyPropertyChanged
                 try
                 {
                     var today = _loadedDate.Value.Date;
-                    var prevDate = today.AddDays(-1);
-                    var prevKey = $"{Key}_{prevDate:yyyyMMdd}";
-                    var prevStr = Preferences.Get(prevKey, string.Empty);
-
-                    // If previous value exists, apply sugar-specific comparison, otherwise
-                    // treat any user change from the default as completion (green).
-                    if (!string.IsNullOrEmpty(prevStr) && double.TryParse(prevStr, out var prevVal) && double.TryParse(_selectedValue, out var currVal))
+                    
+                    // For future dates (tomorrow onwards), always mark as not completed
+                    if (today > DateTime.Today)
                     {
-                        if (Key == "SUGAR_8AM")
+                        IsCompleted = false;
+                        return;
+                    }
+                    
+                    // If no value selected, mark as not completed
+                    if (string.IsNullOrEmpty(_selectedValue))
+                    {
+                        IsCompleted = false;
+                        return;
+                    }
+                    
+                    if (!double.TryParse(_selectedValue, out var currVal))
+                    {
+                        IsCompleted = false;
+                        return;
+                    }
+
+                    // Get previous 3 days values
+                    var prevValues = new List<double>();
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var d = today.AddDays(-i);
+                        var prevStr = Preferences.Get($"{Key}_{d:yyyyMMdd}", string.Empty);
+                        if (!string.IsNullOrEmpty(prevStr) && double.TryParse(prevStr, out var prevVal))
                         {
-                            // sugar: completed if at least 0.5 less than previous
-                            IsCompleted = currVal <= prevVal - 0.5;
+                            prevValues.Add(prevVal);
                         }
-                        else
-                        {
-                            // weight: if previous exists, consider changed value as completed
-                            IsCompleted = Math.Abs(currVal - prevVal) > 0.0001;
-                        }
+                    }
+
+                    // If we have previous values, compare against their average
+                    if (prevValues.Count > 0)
+                    {
+                        var avg = prevValues.Average();
+                        // Completed (green) if current is lower than average
+                        IsCompleted = currVal < avg;
                     }
                     else
                     {
-                        // No previous value: if user changed from the default item mark completed.
-                        if (Items != null && Items.Count > 0)
-                        {
-                            var defaultVal = Items[0];
-                            IsCompleted = _selectedValue != defaultVal && !string.IsNullOrEmpty(_selectedValue);
-                        }
-                        else
-                        {
-                            // no items to compare to — mark completed if a non-empty value set
-                            IsCompleted = !string.IsNullOrEmpty(_selectedValue);
-                        }
+                        // No previous data (first day): mark as completed (green) when value is selected
+                        IsCompleted = true;
                     }
                 }
                 catch
                 {
                     IsCompleted = false;
                 }
-
-                OnPropertyChanged(nameof(Background));
             }
         }
     }
@@ -414,13 +426,26 @@ public class SectionViewModel : INotifyPropertyChanged
             {
                 // For toggle sections, consider completion when true
                 IsCompleted = _toggleValue;
-                OnPropertyChanged(nameof(Background));
             }
         }
     }
 
-    public bool IsCompleted { get; private set; }
-    public Color Background => IsCompleted ? Colors.LightGreen : (IsFailed ? Color.FromArgb("#FFCDD2") : Colors.Transparent);
+    private bool _isCompleted;
+    public bool IsCompleted
+    {
+        get => _isCompleted;
+        private set
+        {
+            if (_isCompleted == value) return;
+            _isCompleted = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Background));
+            OnPropertyChanged(nameof(TextColor));
+        }
+    }
+
+    public Color Background => IsCompleted ? Color.FromArgb("#90EE90") : (IsFailed ? Color.FromArgb("#FFCDD2") : Colors.Transparent);
+    public Color TextColor => IsCompleted ? Colors.Black : Colors.White;
 
     public static SectionViewModel Create(string key, int count, int startHour, int interval, int required, bool rectangle = false)
     {
@@ -515,7 +540,7 @@ public class SectionViewModel : INotifyPropertyChanged
             }
             else if (Items != null && Items.Count > 0)
             {
-                chosen = Items[0];
+                chosen = string.Empty;
             }
 
             // Apply chosen value through the property so completion logic runs.
@@ -572,6 +597,14 @@ public class SectionViewModel : INotifyPropertyChanged
     // Evaluate steps for this section if key is STEPS
     public void EvaluateStepsCompletion(DateTime date)
     {
+        if(date > DateTime.Today)
+        {
+            // Don't evaluate future dates; treat as not completed without failure
+            IsCompleted = false;
+            IsFailed = false;
+            return;
+        }
+
         if (Key != "STEPS") return;
         try
         {
@@ -581,7 +614,6 @@ public class SectionViewModel : INotifyPropertyChanged
             {
                 IsFailed = false;
                 IsCompleted = false;
-                OnPropertyChanged(nameof(Background));
                 return;
             }
 
@@ -595,7 +627,7 @@ public class SectionViewModel : INotifyPropertyChanged
 
             // Compute average of up to 3 previous days; if none available average is 0
             var avg = prevValues.Count > 0 ? (int)Math.Round(prevValues.Average()) : 0;
-            if (todaySteps > avg)
+            if (avg == 0 || todaySteps > avg)
             {
                 IsCompleted = true;
                 IsFailed = false;
@@ -610,8 +642,6 @@ public class SectionViewModel : INotifyPropertyChanged
                 IsCompleted = false;
                 IsFailed = false;
             }
-
-            OnPropertyChanged(nameof(Background));
         }
         catch
         {
@@ -621,7 +651,6 @@ public class SectionViewModel : INotifyPropertyChanged
     internal void UpdateCompletion()
     {
         IsCompleted = Slots.Count(s => s.State == 2) >= _requiredGreen;
-        OnPropertyChanged(nameof(Background));
     }
 
     public event PropertyChangedEventHandler PropertyChanged;

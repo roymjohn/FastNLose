@@ -68,7 +68,7 @@ public static class CategoryFactory
         var s = SectionViewModel.Create("WEIGHT", 0, 0, 1, 0);
         s.IsPicker = true;
         var items = new List<string>();
-        for (double v = 190.0; v <= 212.0; v += 0.5)
+        for (double v = 190.0; v <= 212.0 ; v += 0.5)
             items.Add(v.ToString("0.0"));
         s.Items = items;
         s.Load(date);
@@ -80,21 +80,33 @@ public static class CategoryFactory
         var s = SectionViewModel.Create("SUGAR_8AM", 0, 0, 1, 0);
         s.IsPicker = true;
         var items = new List<string>();
-        for (int v = 110; v <= 180; v += 5)
+        for (int v = 180; v >= 110; v -= 5)
             items.Add(v.ToString());
         s.Items = items;
         s.Load(date);
         // Friendly title
-        s.Title = "8AM-Avg";
+        s.Title = "DayAvg";
+        return s;
+    }
+
+    public static SectionViewModel BuildYes(DateTime date)
+    {
+        var labels = new[] { "80%", "6am", "1GYM5", "150ngt", "PRYR" };
+        var s = SectionViewModel.CreateLabeled("YES", labels);
+        // increase gap between YES rects (double default)
+        s.SlotItemSpacing = 14; // default previously ~7, doubled to ~14
+        s.Title = "YES";
+        s.Load(date);
         return s;
     }
 
     public static SectionViewModel BuildBan(DateTime date)
     {
-        var labels = new[] { "SUGR", "REFND", "RICE", "MILK", "FRIED", "OUTS" };
+        var labels = new[] { "SUGR", "REFND", "Rice", "Milk", "Fried", "eOut" };
         var s = SectionViewModel.CreateLabeled("BAN", labels);
         // increase gap between BAN rects (double default)
         s.SlotItemSpacing = 14; // default previously ~7, doubled to ~14
+        s.Title = "NO";
         s.Load(date);
         return s;
     }
